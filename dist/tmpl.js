@@ -1,5 +1,5 @@
 
-/* riot-tmpl v3.0.8, @license MIT, (c) 2015 Muut Inc. + contributors */
+/* riot-tmpl v4.0.1, @license MIT, (c) 2015 Muut Inc. + contributors */
 ;(function (window) {     // eslint-disable-line no-extra-semi
   'use strict'
 
@@ -348,6 +348,7 @@
     _tmpl.clearCache = function () { _cache = {} }
 
     _tmpl.errorHandler = null
+    _tmpl.getStr = _getStr;
 
     function _logErr (err, ctx) {
 
@@ -367,10 +368,22 @@
       }
     }
 
+    function _getStr(str) {
+     var expr = _getTmpl(str)
+
+      if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr
+
+      expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr
+
+      return expr;
+    }
+
     function _create (str) {
       var expr = _getTmpl(str)
 
       if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr
+
+      expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr
 
       return new Function('E', expr + ';')    // eslint-disable-line no-new-func
     }
@@ -465,6 +478,7 @@
         expr = !cnt ? _wrapExpr(expr, asText)
              : cnt > 1 ? '[' + list.join(',') + '].join(" ").trim()' : list[0]
       }
+
       return expr
 
       function skipBraces (ch, re) {
@@ -517,9 +531,16 @@
 
       } else if (asText) {
 
-        expr = 'function(v){' + (tb
+        if (expr === 'false') {
+          expr = 'function(v){' + (tb
             ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
-          ) + ';return v||v===0?v:""}.call(this)'
+          ) + ';return false}.call(this)'
+        } else {
+
+          expr = 'function(v){' + (tb
+            ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
+          ) + ';return v||v===0||v===false?v:""}.call(this)'
+        }
       }
 
       return expr
@@ -529,7 +550,7 @@
 
   })()
 
-  tmpl.version = brackets.version = 'v3.0.8'
+  tmpl.version = brackets.version = 'v4.0.1'
 
   /* istanbul ignore else */
   if (typeof module === 'object' && module.exports) {

@@ -6545,7 +6545,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 });
 
-var index = hoist;
+var hoister = hoist;
 
 function hoist(ast){
 
@@ -6683,7 +6683,7 @@ function FunctionFactory(parentContext){
 // takes an AST or js source and returns an AST
 function prepareAst(src){
   var tree = (typeof src === 'string') ? parse(src) : src;
-  return index(tree)
+  return hoister(tree)
 }
 
 // evaluate an AST in the given context
@@ -7173,7 +7173,7 @@ function ReturnValue(type, value){
 
 /**
  * The riot template engine
- * @version v3.0.8
+ * @version v4.0.1
  */
 
 var skipRegex = (function () { //eslint-disable-line no-unused-vars
@@ -7523,6 +7523,7 @@ var tmpl = (function () {
   _tmpl.clearCache = function () { _cache = {}; };
 
   _tmpl.errorHandler = null;
+  _tmpl.getStr = _getStr;
 
   function _logErr (err, ctx) {
 
@@ -7542,10 +7543,22 @@ var tmpl = (function () {
     }
   }
 
+  function _getStr(str) {
+   var expr = _getTmpl(str);
+
+    if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr;
+
+    expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr;
+
+    return expr;
+  }
+
   function _create (str) {
     var expr = _getTmpl(str);
 
     if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr;
+
+    expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr;
 
     return safeEval.func('E', expr + ';')
   }
@@ -7640,6 +7653,7 @@ var tmpl = (function () {
       expr = !cnt ? _wrapExpr(expr, asText)
            : cnt > 1 ? '[' + list.join(',') + '].join(" ").trim()' : list[0];
     }
+
     return expr
 
     function skipBraces (ch, re) {
@@ -7692,15 +7706,22 @@ var tmpl = (function () {
 
     } else if (asText) {
 
-      expr = 'function(v){' + (tb
+      if (expr === 'false') {
+        expr = 'function(v){' + (tb
           ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
-        ) + ';return v||v===0?v:""}.call(this)';
+        ) + ';return false}.call(this)';
+      } else {
+
+        expr = 'function(v){' + (tb
+          ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
+        ) + ';return v||v===0||v===false?v:""}.call(this)';
+      }
     }
 
     return expr
   }
 
-  _tmpl.version = brackets.version = 'v3.0.8';
+  _tmpl.version = brackets.version = 'v4.0.1';
 
   return _tmpl
 

@@ -14,7 +14,7 @@ The riot template engine
 ### Npm
 
 ```sh
-npm install riot-tmpl --save
+npm install @khulnasoft-lab/riot-tmpl --save
 ```
 
 ### Bower

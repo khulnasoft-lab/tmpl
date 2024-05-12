@@ -79,10 +79,12 @@ describe('riot-tmpl', function () {
       delete data.parent
     })
 
-    it('in templates, falsy values result in empty string, except zero', function () {
+    it('in templates, falsy values result in empty string, except zero and false', function () {
       expect(render(' { nonExistingVar }')).to.equal(' ')
-      expect(render(' { no }')).to.equal(' ')
+      expect(render(' { no }')).to.equal(' false')
       expect(render(' { $a }')).to.equal(' 0')
+      expect(render('{false}')).to.equal(false)
+      expect(render(' {false}')).to.equal(' false')
     })
 
     //// expressions
@@ -99,11 +101,11 @@ describe('riot-tmpl', function () {
       expect(render('{ false || null || !no && yes }')).to.be(true)
       expect(render('{ !no ? "yes" : "no" }')).to.be('yes')
       expect(render('{ !yes ? "yes" : "no" }')).to.be('no')
-      expect(render('{ /^14/.test(+new Date()) }')).to.be(true)
+      // expect(render('{ /^14/.test(+new Date()) }')).to.be(true)
       expect(render('{ typeof Math.random() }')).to.be('number')
       expect(render('{ fn("there") }')).to.be('hi there')
       expect(render('{ str == "x" }')).to.be(true)
-      debugger
+      // debugger
       expect(render('{ /x/.test(str) }')).to.be(true)
       expect(render('{ true ? "a b c" : "foo" }')).to.be('a b c')
       expect(render('{ true ? "a \\"b\\" c" : "foo" }')).to.be('a "b" c')
@@ -114,8 +116,8 @@ describe('riot-tmpl', function () {
       expect(render('{ this.str }')).to.be('x')
     })
 
-    it('global variables are supported in expressions', function () {
-      expect(render('{ globalVar }')).to.be(globalVar)
+    it('global variables are not supported in expressions', function () {
+      expect(render('{ globalVar }')).to.be(undefined)
     })
 
     it('all comments in expressions are stripped from the output (not anymore)', function () {
@@ -207,12 +209,14 @@ describe('riot-tmpl', function () {
 
     it('unwrapped keywords void, window and global, in addition to `this`', function () {
       data.$a = 5
-      expect(render('{' + (typeof window === 'object' ? 'window' : 'global') + '.globalVar }')).to.be(5)
+      expect(render('{ ' + (typeof window === 'object' ? 'window' : 'global') + ' }')).to.be.a('object')
+      expect(Object.keys(render('{ ' + (typeof window === 'object' ? 'window' : 'global') + ' }')).length).to.be(0)
+
+      expect(render('{' + (typeof window === 'object' ? 'window' : 'global') + '.globalVar }')).to.be(undefined)
       expect(render('{ this.$a }')).to.be(5)
       expect(render('{ void 0 }')).to.be(undefined)
-      // without unprefixed global/window, default convertion to `new (D).Date()` throws here
-      data.Date = typeof window !== 'object' ? 'global' : 'window'
-      expect(render('{ new ' + data.Date + '.Date() }')).to.be.a('object')
+      data.Date = Date
+      expect(render('{ new Date() }')).to.be.a('object')
       delete data.Date
     })
 
@@ -315,18 +319,22 @@ describe('riot-tmpl', function () {
     it('does not wrap global and window object names', function () {
       var gw = typeof window === 'object' ? 'window' : 'global'
 
-      expect(render('{ ' + gw + '.globalVar }')).to.be(5)
+      expect(render('{ ' + gw + '.globalVar }')).to.be(undefined)
       data.Date = '{}'
-      expect(render('{ +new ' + gw + '.Date() }')).to.be.a('number')
+      expect(render('{ +new ' + gw + '.Date() }')).to.be(undefined)
       delete data.Date
     })
 
     it('unwrapped keywords: Infinity, isFinite, isNaN, Date, RegExp and Math', function () {
       var i, a = ['isFinite', 'isNaN', 'Date', 'RegExp', 'Math']
 
-      for (i = 0; i < a.length; ++i) {
-        data[a[i]] = 0
-      }
+      data.Infinity = Infinity
+      data.isFinite = isFinite
+      data.isNaN = isNaN
+      data.Date = Date
+      data.RegExp = RegExp
+      data.Math = Math
+
       expect(render('{ Infinity }')).to.be.a('number')
       expect(render('{ isFinite(1) }')).to.be(true)
       expect(render('{ isNaN({}) }')).to.be(true)

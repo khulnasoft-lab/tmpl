@@ -1,7 +1,7 @@
 
 /**
  * The riot template engine
- * @version v3.0.8
+ * @version v4.0.1
  */
 
 var skipRegex = (function () { //eslint-disable-line no-unused-vars
@@ -353,6 +353,7 @@ var tmpl = (function () {
   _tmpl.clearCache = function () { _cache = {} }
 
   _tmpl.errorHandler = null
+  _tmpl.getStr = _getStr;
 
   function _logErr (err, ctx) {
 
@@ -372,10 +373,22 @@ var tmpl = (function () {
     }
   }
 
+  function _getStr(str) {
+   var expr = _getTmpl(str)
+
+    if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr
+
+    expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr
+
+    return expr;
+  }
+
   function _create (str) {
     var expr = _getTmpl(str)
 
     if (expr.slice(0, 11) !== 'try{return ') expr = 'return ' + expr
+
+    expr = 'var ' + (typeof window !== 'object' ? 'global' : 'window') + ' = {}; ' + expr
 
     return new Function('E', expr + ';')    // eslint-disable-line no-new-func
   }
@@ -470,6 +483,7 @@ var tmpl = (function () {
       expr = !cnt ? _wrapExpr(expr, asText)
            : cnt > 1 ? '[' + list.join(',') + '].join(" ").trim()' : list[0]
     }
+
     return expr
 
     function skipBraces (ch, re) {
@@ -522,15 +536,22 @@ var tmpl = (function () {
 
     } else if (asText) {
 
-      expr = 'function(v){' + (tb
+      if (expr === 'false') {
+        expr = 'function(v){' + (tb
           ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
-        ) + ';return v||v===0?v:""}.call(this)'
+        ) + ';return false}.call(this)'
+      } else {
+
+        expr = 'function(v){' + (tb
+          ? expr.replace('return ', 'v=') : 'v=(' + expr + ')'
+        ) + ';return v||v===0||v===false?v:""}.call(this)'
+      }
     }
 
     return expr
   }
 
-  _tmpl.version = brackets.version = 'v3.0.8'
+  _tmpl.version = brackets.version = 'v4.0.1'
 
   return _tmpl
 
